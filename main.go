@@ -53,6 +53,14 @@ func parseLocationCoords(args string) error {
 	return nil
 }
 
+func marshalIndentJSON(v interface{}) ([]byte, error) {
+	return json.MarshalIndent(v, "", "\t")
+}
+
+func marshalIndentXML(v interface{}) ([]byte, error) {
+	return xml.MarshalIndent(v, "", "\t")
+}
+
 func init() {
 	snowWeather.StringVar(&weather.LocationName, "location", "", "Name of the location")
 	snowWeather.Float64Var(&weather.Temperature, "temp", -274, "Temperature at the location in degrees Celsius")
@@ -102,38 +110,48 @@ func main() {
 		return
 	}
 
+	weather.LocationName = strings.ToLower(weather.LocationName)
 	weather.Type = os.Args[1]
 	date := time.Now()
 	weather.Date = date
+	sugar := logger.Sugar()
 
-	serResult, _ := json.MarshalIndent(weather, "", "	")
-	logger.Info("Go-структура \"Weather\" была сериализована в JSON-представление")
-	file, _ := os.OpenFile("weather.json", os.O_CREATE|os.O_WRONLY, 0644)
-	file.Write(serResult)
-	file.Close()
-	logger.Info("Файл weather.json был успешно обновлён")
+	formats := []struct {
+		name    string
+		ext     string
+		encoder func(interface{}) ([]byte, error)
+		log     string
+	}{
+		{"JSON", "json", marshalIndentJSON, "Go-структура \"Weather\" была сериализована в JSON-представление"},
+		{"XML", "xml", marshalIndentXML, "Go-структура \"Weather\" была сериализована в XML-представление"},
+		{"YAML", "yaml", yaml.Marshal, "Go-структура \"Weather\" была сериализована в YAML-представление"},
+		{"TOML", "toml", toml.Marshal, "Go-структура \"Weather\" была сериализована в TOML-представление"},
+	}
 
-	serResult, _ = xml.MarshalIndent(weather, "", "\t")
-	logger.Info("Go-структура \"Weather\" была сериализована в XML-представление")
-	file, _ = os.OpenFile("weather.xml", os.O_CREATE|os.O_WRONLY, 0644)
-	file.Write(serResult)
-	file.Close()
-	logger.Info("Файл weather.xml был успешно обновлён")
+	for _, format := range formats {
+		serResult, err := format.encoder(weather)
+		if err != nil {
+			sugar.Errorf("Ошибка сериализации в формат %s: %v", format.name, err)
+			continue
+		}
 
-	serResult, _ = yaml.Marshal(weather)
-	logger.Info("Go-структура \"Weather\" была сериализована в YAML-представление")
-	file, _ = os.OpenFile("weather.yaml", os.O_CREATE|os.O_WRONLY, 0644)
-	file.Write(serResult)
-	file.Close()
-	logger.Info("Файл weather.yaml был успешно обновлён")
+		fileName := fmt.Sprintf("weather.%s", format.ext)
+		file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			sugar.Errorf("Ошибка открытия файла %s: %v", fileName, err)
+			continue
+		}
+		defer file.Close()
 
-	serResult, _ = toml.Marshal(weather)
-	logger.Info("Go-структура \"Weather\" была сериализована в TOML-представление")
-	file, _ = os.OpenFile("weather.toml", os.O_CREATE|os.O_WRONLY, 0644)
-	defer file.Close()
-	file.Write(serResult)
-	logger.Info("Файл weather.toml был успешно обновлён\n\n")
+		_, err = file.Write(serResult)
+		if err != nil {
+			sugar.Errorf("Ошибка записи в файл %s: %v", fileName, err)
+			continue
+		}
 
+		sugar.Infof("%s. Файл %s был успешно обновлён", format.log, fileName)
+	}
+	fmt.Println("\n")
 	view(weather)
 }
 
@@ -167,16 +185,12 @@ func view(val interface{}) {
 						fieldValue = fmt.Sprintf("%v", ValInterface.Field(i).Elem().Interface())
 					}
 
-				} else {
-					fieldValue = "Значение отсутствует"
 				}
 			} else if ValInterface.Field(i).Kind() == reflect.Slice {
 				fieldValue = fmt.Sprintf("%v", ValInterface.Field(i).Interface())
 			} else {
 				if !ValInterface.Field(i).IsZero() {
 					fieldValue = fmt.Sprintf("%v", ValInterface.Field(i).Interface())
-				} else {
-					fieldValue = "Значение отсутствует"
 				}
 			}
 
