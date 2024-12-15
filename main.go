@@ -20,8 +20,8 @@ type Weather struct {
 	Type           string     `toml:"weather_type" json:"weather_type" xml:"weather_type" yaml:"weather_type"`
 	LocationName   string     `toml:"location" json:"location" xml:"location" yaml:"location"`
 	LocationCoords [2]float64 `toml:"location_coords" json:"location_coords" xml:"-" yaml:"location_coords,flow"`
-	XCoord         float64    `xml:"location_coords>x_crd" toml:"-" json:"-" yaml:"-"`
-	YCoord         float64    `xml:"location_coords>y_crd" toml:"-" json:"-" yaml:"-"`
+	XCoord         float64    `xml:"location_coords>lat" toml:"-" json:"-" yaml:"-"`
+	YCoord         float64    `xml:"location_coords>long" toml:"-" json:"-" yaml:"-"`
 	Temperature    float64    `toml:"temperature" json:"temperature" xml:"temperature" yaml:"temperature"`
 	Date           time.Time  `toml:"date" json:"date" xml:"date" yaml:"date"`
 	Comment        string     `toml:"info" comment:"Info from observer" json:"info,omitempty" xml:"info,omitempty" yaml:"info,omitempty"`
