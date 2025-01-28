@@ -98,7 +98,7 @@ func main() {
 		return
 	}
 	if weather.Temperature <= -273.15 {
-		logger.Fatal("Температура не может быть ниже -273.15°! Возможно вы забыли  её указать?", zap.Float64("temp", weather.Temperature))
+		logger.Fatal("Температура не может быть ниже -273.15°! Возможно вы забыли её указать?", zap.Float64("temp", weather.Temperature))
 		return
 	}
 	if weather.LocationCoords == [2]float64{} {
